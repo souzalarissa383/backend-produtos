@@ -63,3 +63,4 @@ Este é um sistema de backend desenvolvido com **NestJS** e **SQLite** para o ge
    ```bash
    git clone <link-do-repositório>
    cd <diretório-do-projeto>
+   ```
