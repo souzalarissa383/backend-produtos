@@ -1,13 +1,12 @@
 import { Controller, Get, Post, Put, Delete, Body, Param } from '@nestjs/common';
 import { ProdutoService } from './produto.service';
-import { Produto } from './produto.entity';
 
 @Controller('produto')
 export class ProdutoController {
   constructor(private readonly produtoService: ProdutoService) {}
 
   @Post()
-  create(@Body() produto: Produto) {
+  create(@Body() produto: any) {
     return this.produtoService.create(produto);
   }
 
@@ -17,7 +16,7 @@ export class ProdutoController {
   }
 
   @Put(':id')
-  update(@Param('id') id: number, @Body() produto: Partial<Produto>) {
+  update(@Param('id') id: number, @Body() produto: any) {
     return this.produtoService.update(id, produto);
   }
 

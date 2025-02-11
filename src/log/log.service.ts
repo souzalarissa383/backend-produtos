@@ -1,24 +1,34 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Log } from './log.entity';
+import * as sqlite3 from 'sqlite3';
+import { open } from 'sqlite';
 
 @Injectable()
 export class LogService {
-  constructor(
-    @InjectRepository(Log)
-    private logRepo: Repository<Log>,
-  ) {}
+  private db: any;
+
+  constructor() {
+    this.initDb();
+  }
+
+  async initDb() {
+    this.db = await open({
+      filename: './database.sqlite',
+      driver: sqlite3.Database,
+    });
+  }
 
   async createLog(entidade: string, entidadeId: number): Promise<void> {
-    await this.logRepo.save({ ENTIDADE: entidade, ENTIDADE_ID: entidadeId });
+    await this.db.run(
+      'INSERT INTO Log (ENTIDADE, ENTIDADE_ID, DTINC) VALUES (?, ?, CURRENT_TIMESTAMP)',
+      [entidade, entidadeId]
+    );
   }
 
   async findLogs(entidade: string, pagina: number) {
-    return this.logRepo.find({
-      where: { ENTIDADE: entidade },
-      take: 50,
-      skip: (pagina - 1) * 50,
-    });
+    const offset = (pagina - 1) * 50;
+    return this.db.all(
+      'SELECT * FROM Log WHERE ENTIDADE = ? ORDER BY DTINC DESC LIMIT 50 OFFSET ?',
+      [entidade, offset]
+    );
   }
 }

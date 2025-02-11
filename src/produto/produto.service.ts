@@ -1,34 +1,78 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Produto } from './produto.entity';
+import sqlite3 from 'sqlite3';
 import { LogService } from '../log/log.service';
 
 @Injectable()
 export class ProdutoService {
-  constructor(
-    @InjectRepository(Produto)
-    private produtoRepo: Repository<Produto>,
-    private logService: LogService,
-  ) {}
+  private db: sqlite3.Database;
 
-  async create(produto: Produto): Promise<Produto> {
-    const newProduto = await this.produtoRepo.save(produto);
-    await this.logService.createLog('PRODUTO', newProduto.CODPROD);
-    return newProduto;
+  constructor(private logService: LogService) {
+    this.db = new sqlite3.Database('database.sqlite');
+    this.createTable();
   }
 
-  async findAll(): Promise<Produto[]> {
-    return this.produtoRepo.find();
+  private createTable() {
+    this.db.run(`
+      CREATE TABLE IF NOT EXISTS produtos (
+        CODPROD INTEGER PRIMARY KEY AUTOINCREMENT,
+        DSCRPROD TEXT,
+        MARCA TEXT,
+        VALOR TEXT
+      );
+    `);
   }
 
-  async update(id: number, produto: Partial<Produto>): Promise<void> {
-    await this.produtoRepo.update(id, produto);
-    await this.logService.createLog('PRODUTO', id);
+  async create(produto: any): Promise<any> {
+    return new Promise((resolve, reject) => {
+      const sql = `INSERT INTO produtos (DSCRPROD, MARCA, VALOR) VALUES (?, ?, ?)`;
+      this.db.run(sql, [produto.DSCRPROD, produto.MARCA, produto.VALOR], function (err) {
+        if (err) {
+          reject(err);
+        } else {
+          resolve({ CODPROD: this.lastID, ...produto });
+        }
+      });
+    });
+  }
+
+  async findAll(): Promise<any[]> {
+    return new Promise((resolve, reject) => {
+      const sql = `SELECT * FROM produtos`;
+      this.db.all(sql, [], (err, rows) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(rows);
+        }
+      });
+    });
+  }
+
+  async update(id: number, produto: any): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const sql = `UPDATE produtos SET DSCRPROD = ?, MARCA = ?, VALOR = ? WHERE CODPROD = ?`;
+      this.db.run(sql, [produto.DSCRPROD, produto.MARCA, produto.VALOR, id], async (err) => {
+        if (err) {
+          reject(err);
+        } else {
+          await this.logService.createLog('PRODUTO', id);
+          resolve();
+        }
+      });
+    });
   }
 
   async delete(id: number): Promise<void> {
-    await this.produtoRepo.delete(id);
-    await this.logService.createLog('PRODUTO', id);
+    return new Promise((resolve, reject) => {
+      const sql = `DELETE FROM produtos WHERE CODPROD = ?`;
+      this.db.run(sql, [id], async (err) => {
+        if (err) {
+          reject(err);
+        } else {
+          await this.logService.createLog('PRODUTO', id);
+          resolve();
+        }
+      });
+    });
   }
 }
